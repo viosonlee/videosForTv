@@ -16,22 +16,22 @@ object DebugLog {
 
     fun v(tag: String, value: String) {
         if (BuildConfig.DEBUG)
-            Log.d(tag, value)
+            Log.v(tag, value)
     }
 
     fun i(tag: String, value: String) {
         if (BuildConfig.DEBUG)
-            Log.d(tag, value)
+            Log.i(tag, value)
     }
 
     fun w(tag: String, value: String) {
         if (BuildConfig.DEBUG)
-            Log.d(tag, value)
+            Log.w(tag, value)
     }
 
     fun e(tag: String, value: String) {
         if (BuildConfig.DEBUG)
-            Log.d(tag, value)
+            Log.e(tag, value)
     }
 
     fun d(value: String) {
@@ -46,17 +46,17 @@ object DebugLog {
 
     fun i(value: String) {
         if (BuildConfig.DEBUG)
-            Log.d(TAG, value)
+            Log.i(TAG, value)
     }
 
     fun w(value: String) {
         if (BuildConfig.DEBUG)
-            Log.d(TAG, value)
+            Log.w(TAG, value)
     }
 
     fun e(value: String) {
         if (BuildConfig.DEBUG)
-            Log.d(TAG, value)
+            Log.e(TAG, value)
     }
 
 

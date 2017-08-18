@@ -19,7 +19,7 @@ import android.support.v17.leanback.app.VideoSupportFragment
 import android.support.v17.leanback.app.VideoSupportFragmentGlueHost
 import android.support.v17.leanback.media.MediaPlayerGlue
 import android.support.v17.leanback.media.PlaybackGlue
-import lee.vioson.videosfortv.web.models.Movie
+import lee.vioson.videosfortv.web.models.Video
 
 /** Handles video playback with media controls. */
 class PlaybackVideoFragment : VideoSupportFragment() {
@@ -29,9 +29,11 @@ class PlaybackVideoFragment : VideoSupportFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val (_, title, description, _, _, videoUrl) = activity
-                .intent.getSerializableExtra(DetailsActivity.MOVIE) as Movie
-
+//        val (_, title, description, _, _, videoUrl) = activity
+//                .intent.getSerializableExtra(DetailsActivity.MOVIE) as Movie
+        val video = activity.intent.getParcelableExtra<Video>(PlaybackActivity.MOVIE)
+        val videoUrl = activity.intent.getStringExtra(PlaybackActivity.PLAY_URL)
+        val description = activity.intent.getStringExtra(PlaybackActivity.DESC)
         val glueHost = VideoSupportFragmentGlueHost(this@PlaybackVideoFragment)
 
         mMediaPlayerGlue = MediaPlayerGlue(activity)
@@ -42,7 +44,7 @@ class PlaybackVideoFragment : VideoSupportFragment() {
                 mMediaPlayerGlue.play()
             }
         })
-        mMediaPlayerGlue.setTitle(title)
+        mMediaPlayerGlue.setTitle(video.name)
         mMediaPlayerGlue.setArtist(description)
         mMediaPlayerGlue.setVideoUrl(videoUrl)
     }

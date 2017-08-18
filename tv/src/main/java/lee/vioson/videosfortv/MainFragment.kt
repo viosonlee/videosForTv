@@ -14,10 +14,6 @@
 
 package lee.vioson.videosfortv
 
-import java.util.Collections
-import java.util.Timer
-import java.util.TimerTask
-
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.Drawable
@@ -25,16 +21,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.support.v17.leanback.app.BackgroundManager
 import android.support.v17.leanback.app.BrowseFragment
-import android.support.v17.leanback.widget.ArrayObjectAdapter
-import android.support.v17.leanback.widget.HeaderItem
-import android.support.v17.leanback.widget.ImageCardView
-import android.support.v17.leanback.widget.ListRow
-import android.support.v17.leanback.widget.ListRowPresenter
-import android.support.v17.leanback.widget.OnItemViewClickedListener
-import android.support.v17.leanback.widget.OnItemViewSelectedListener
-import android.support.v17.leanback.widget.Presenter
-import android.support.v17.leanback.widget.Row
-import android.support.v17.leanback.widget.RowPresenter
+import android.support.v17.leanback.widget.*
 import android.support.v4.app.ActivityOptionsCompat
 import android.support.v4.content.ContextCompat
 import android.util.DisplayMetrics
@@ -43,13 +30,19 @@ import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
-
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.GlideDrawable
 import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
+import lee.vioson.videosfortv.utils.ToastUtil
+import lee.vioson.videosfortv.web.DataType
+import lee.vioson.videosfortv.web.Requester
 import lee.vioson.videosfortv.web.models.Movie
 import lee.vioson.videosfortv.web.models.MovieList
+import lee.vioson.videosfortv.web.models.Video
+import lee.vioson.videosfortv.web.responses.HotPlayResponse
+import rx.SingleSubscriber
+import java.util.*
 
 /**
  * Loads a grid of cards with movies to browse.
@@ -72,9 +65,15 @@ class MainFragment : BrowseFragment() {
 
         setupUIElements()
 
-        loadRows()
+        loadData()
+
+//        loadRows()
 
         setupEventListeners()
+    }
+
+    private fun loadData() {
+        Requester.hotPlay(DataType.HOT.type, DataHandler())
     }
 
     override fun onDestroy() {
@@ -104,6 +103,43 @@ class MainFragment : BrowseFragment() {
         searchAffordanceColor = ContextCompat.getColor(activity, R.color.search_opaque)
     }
 
+    private fun setupEventListeners() {
+        setOnSearchClickedListener {
+            Toast.makeText(activity, "Implement your own in-app search", Toast.LENGTH_LONG)
+                    .show()
+        }
+
+        onItemViewClickedListener = ItemViewClickedListener()
+        onItemViewSelectedListener = ItemViewSelectedListener()
+    }
+
+    private inner class DataHandler : SingleSubscriber<HotPlayResponse>() {
+
+        override fun onError(error: Throwable?) {
+            ToastUtil.showToast(activity, error?.message as String)
+            DebugLog.e(error.toString())
+        }
+
+        override fun onSuccess(value: HotPlayResponse?) {
+            mRowsAdapter = ArrayObjectAdapter(ListRowPresenter())
+            val cardPresenter = CardPresenter()
+
+            NUM_ROWS = value?.body?.viewItemModels?.size as Int
+            for (i in 0 until NUM_ROWS) {
+                val listRowAdapter = ArrayObjectAdapter(cardPresenter)
+                NUM_COLS = value.body.viewItemModels[i].videos.size
+                for (j in 0 until NUM_COLS) {
+                    listRowAdapter.add(value.body.viewItemModels[i].videos[j])
+                }
+                val header = HeaderItem(i.toLong(), value.body.viewItemModels[i].title)
+                mRowsAdapter.add(ListRow(header, listRowAdapter))
+            }
+
+            adapter = mRowsAdapter
+        }
+
+    }
+
     private fun loadRows() {
         val list = MovieList.list
 
@@ -130,25 +166,14 @@ class MainFragment : BrowseFragment() {
         gridRowAdapter.add(getString(R.string.error_fragment))
         gridRowAdapter.add(resources.getString(R.string.personal_settings))
         mRowsAdapter.add(ListRow(gridHeader, gridRowAdapter))
-
         adapter = mRowsAdapter
-    }
-
-    private fun setupEventListeners() {
-        setOnSearchClickedListener {
-            Toast.makeText(activity, "Implement your own in-app search", Toast.LENGTH_LONG)
-                    .show()
-        }
-
-        onItemViewClickedListener = ItemViewClickedListener()
-        onItemViewSelectedListener = ItemViewSelectedListener()
     }
 
     private inner class ItemViewClickedListener : OnItemViewClickedListener {
         override fun onItemClicked(itemViewHolder: Presenter.ViewHolder, item: Any,
                                    rowViewHolder: RowPresenter.ViewHolder, row: Row) {
 
-            if (item is Movie) {
+            if (item is Video) {
                 Log.d(TAG, "Item: " + item.toString())
                 val intent = Intent(activity, DetailsActivity::class.java)
                 intent.putExtra(DetailsActivity.MOVIE, item)
@@ -158,22 +183,23 @@ class MainFragment : BrowseFragment() {
                         (itemViewHolder.view as ImageCardView).mainImageView,
                         DetailsActivity.SHARED_ELEMENT_NAME).toBundle()
                 activity.startActivity(intent, bundle)
-            } else if (item is String) {
-                if (item.contains(getString(R.string.error_fragment))) {
-                    val intent = Intent(activity, BrowseErrorActivity::class.java)
-                    startActivity(intent)
-                } else {
-                    Toast.makeText(activity, item, Toast.LENGTH_SHORT).show()
-                }
             }
+//            else if (item is String) {
+//                if (item.contains(getString(R.string.error_fragment))) {
+//                    val intent = Intent(activity, BrowseErrorActivity::class.java)
+//                    startActivity(intent)
+//                } else {
+//                    Toast.makeText(activity, item, Toast.LENGTH_SHORT).show()
+//                }
+//            }
         }
     }
 
     private inner class ItemViewSelectedListener : OnItemViewSelectedListener {
         override fun onItemSelected(itemViewHolder: Presenter.ViewHolder?, item: Any?,
                                     rowViewHolder: RowPresenter.ViewHolder, row: Row) {
-            if (item is Movie) {
-                mBackgroundUri = item.backgroundImageUrl
+            if (item is Video) {
+                mBackgroundUri = item.img
                 startBackgroundTimer()
             }
         }
@@ -234,7 +260,7 @@ class MainFragment : BrowseFragment() {
         private val BACKGROUND_UPDATE_DELAY = 300
         private val GRID_ITEM_WIDTH = 200
         private val GRID_ITEM_HEIGHT = 200
-        private val NUM_ROWS = 6
-        private val NUM_COLS = 15
+        private var NUM_ROWS = 6
+        private var NUM_COLS = 15
     }
 }

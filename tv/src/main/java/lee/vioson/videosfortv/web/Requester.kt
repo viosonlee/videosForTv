@@ -2,9 +2,7 @@ package lee.vioson.videosfortv.web
 
 import android.text.TextUtils
 import lee.vioson.videosfortv.DebugLog
-import lee.vioson.videosfortv.web.responses.HotPlayResponse
-import lee.vioson.videosfortv.web.responses.SearchResponse
-import lee.vioson.videosfortv.web.responses.SuggestResponse
+import lee.vioson.videosfortv.web.responses.*
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -22,9 +20,9 @@ import java.util.concurrent.TimeUnit
  * todo
  */
 object Requester {
-    var iApi: IApi? = null
+    private var iApi: IApi? = null
     private val DEFAULT_TIME_OUT: Long = 10 * 1000
-    private val BASE_URL = "120.55.16.187"
+    private val BASE_URL = "http://120.55.16.187"
 
     private fun getApi(): IApi {
         if (iApi == null) {
@@ -40,7 +38,7 @@ object Requester {
         val logging: HttpLoggingInterceptor = HttpLoggingInterceptor(HttpLoggingInterceptor.Logger {
             message ->
             run {
-                if (TextUtils.isEmpty(message)) {
+                if (!TextUtils.isEmpty(message)) {
                     val substring = message.substring(0, 1)
                     //如果收到想响应是json才打印
                     if ("{" == substring || "[" == substring) {
@@ -90,5 +88,9 @@ object Requester {
 
     fun hotPlay(type: Int, subscriber: SingleSubscriber<HotPlayResponse>) {
         request(getApi().hotPlay(type), subscriber)
+    }
+
+    fun videoInfo(videoId: Long, subscriber: SingleSubscriber<VideoInfoResponse>) {
+        request(getApi().videoInfo(videoId), subscriber)
     }
 }

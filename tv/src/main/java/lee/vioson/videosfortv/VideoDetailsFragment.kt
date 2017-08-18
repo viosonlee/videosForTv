@@ -20,34 +20,21 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.support.v17.leanback.app.DetailsFragment
 import android.support.v17.leanback.app.DetailsFragmentBackgroundController
-import android.support.v17.leanback.widget.Action
-import android.support.v17.leanback.widget.ArrayObjectAdapter
-import android.support.v17.leanback.widget.ClassPresenterSelector
-import android.support.v17.leanback.widget.DetailsOverviewRow
-import android.support.v17.leanback.widget.FullWidthDetailsOverviewRowPresenter
-import android.support.v17.leanback.widget.FullWidthDetailsOverviewSharedElementHelper
-import android.support.v17.leanback.widget.HeaderItem
-import android.support.v17.leanback.widget.ImageCardView
-import android.support.v17.leanback.widget.ListRow
-import android.support.v17.leanback.widget.ListRowPresenter
-import android.support.v17.leanback.widget.OnActionClickedListener
-import android.support.v17.leanback.widget.OnItemViewClickedListener
-import android.support.v17.leanback.widget.Presenter
-import android.support.v17.leanback.widget.Row
-import android.support.v17.leanback.widget.RowPresenter
+import android.support.v17.leanback.widget.*
 import android.support.v4.app.ActivityOptionsCompat
 import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.widget.Toast
-
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.GlideDrawable
 import com.bumptech.glide.request.animation.GlideAnimation
 import com.bumptech.glide.request.target.SimpleTarget
-import lee.vioson.videosfortv.web.models.Movie
-import lee.vioson.videosfortv.web.models.MovieList
-
-import java.util.Collections
+import lee.vioson.videosfortv.utils.ToastUtil
+import lee.vioson.videosfortv.web.Requester
+import lee.vioson.videosfortv.web.models.Video
+import lee.vioson.videosfortv.web.models.VideoInfo
+import lee.vioson.videosfortv.web.responses.VideoInfoResponse
+import rx.SingleSubscriber
 
 /**
  * A wrapper fragment for leanback details screens.
@@ -55,25 +42,36 @@ import java.util.Collections
  */
 class VideoDetailsFragment : DetailsFragment() {
 
-    private var mSelectedMovie: Movie? = null
-
+    private var mSelectedMovie: Video? = null
+    private lateinit var mVideoInfo: VideoInfo
     private lateinit var mDetailsBackground: DetailsFragmentBackgroundController
     private lateinit var mPresenterSelector: ClassPresenterSelector
     private lateinit var mAdapter: ArrayObjectAdapter
 
+    private inner class DataHandler : SingleSubscriber<VideoInfoResponse>() {
+        override fun onSuccess(value: VideoInfoResponse?) {
+            mVideoInfo = value!!.body
+            setupDetailsOverviewRow()
+        }
+
+        override fun onError(error: Throwable?) {
+            DebugLog.e("error:" + error.toString())
+            ToastUtil.showToast(activity, R.string.video_info_error)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "onCreate DetailsFragment")
         super.onCreate(savedInstanceState)
-
         mDetailsBackground = DetailsFragmentBackgroundController(this)
-
-        mSelectedMovie = activity.intent.getSerializableExtra(DetailsActivity.MOVIE) as Movie
+        mSelectedMovie = activity.intent.getParcelableExtra(DetailsActivity.MOVIE)
+        loadVideoInfo()
         if (mSelectedMovie != null) {
             mPresenterSelector = ClassPresenterSelector()
             mAdapter = ArrayObjectAdapter(mPresenterSelector)
-            setupDetailsOverviewRow()
+
             setupDetailsOverviewRowPresenter()
-            setupRelatedMovieListRow()
+//            setupRelatedMovieListRow()
             adapter = mAdapter
             initializeBackground(mSelectedMovie)
             onItemViewClickedListener = ItemViewClickedListener()
@@ -83,10 +81,14 @@ class VideoDetailsFragment : DetailsFragment() {
         }
     }
 
-    private fun initializeBackground(movie: Movie?) {
+    private fun loadVideoInfo() {
+        Requester.videoInfo(mSelectedMovie!!.movieId, DataHandler())
+    }
+
+    private fun initializeBackground(movie: Video?) {
         mDetailsBackground.enableParallax()
         Glide.with(activity)
-                .load(movie?.backgroundImageUrl)
+                .load(movie?.img)
                 .asBitmap()
                 .centerCrop()
                 .error(R.drawable.default_background)
@@ -106,7 +108,7 @@ class VideoDetailsFragment : DetailsFragment() {
         val width = convertDpToPixel(activity, DETAIL_THUMB_WIDTH)
         val height = convertDpToPixel(activity, DETAIL_THUMB_HEIGHT)
         Glide.with(activity)
-                .load(mSelectedMovie?.cardImageUrl)
+                .load(mSelectedMovie?.img)
                 .centerCrop()
                 .error(R.drawable.default_background)
                 .into<SimpleTarget<GlideDrawable>>(object : SimpleTarget<GlideDrawable>(width, height) {
@@ -119,22 +121,10 @@ class VideoDetailsFragment : DetailsFragment() {
                 })
 
         val actionAdapter = ArrayObjectAdapter()
-
-        actionAdapter.add(
-                Action(
-                        ACTION_WATCH_TRAILER,
-                        resources.getString(R.string.watch_trailer_1),
-                        resources.getString(R.string.watch_trailer_2)))
-        actionAdapter.add(
-                Action(
-                        ACTION_RENT,
-                        resources.getString(R.string.rent_1),
-                        resources.getString(R.string.rent_2)))
-        actionAdapter.add(
-                Action(
-                        ACTION_BUY,
-                        resources.getString(R.string.buy_1),
-                        resources.getString(R.string.buy_2)))
+        val list = mVideoInfo.sources
+        for (i in 0 until list.size) {
+            actionAdapter.add(Action(i.toLong(), list[i].name))
+        }
         row.actionsAdapter = actionAdapter
 
         mAdapter.add(row)
@@ -154,31 +144,33 @@ class VideoDetailsFragment : DetailsFragment() {
         detailsPresenter.isParticipatingEntranceTransition = true
 
         detailsPresenter.onActionClickedListener = OnActionClickedListener { action ->
-            if (action.id == ACTION_WATCH_TRAILER) {
-                val intent = Intent(activity, PlaybackActivity::class.java)
-                intent.putExtra(DetailsActivity.MOVIE, mSelectedMovie)
-                startActivity(intent)
-            } else {
-                Toast.makeText(activity, action.toString(), Toast.LENGTH_SHORT).show()
-            }
+            //            val intent = Intent(activity, PlaybackActivity::class.java)
+//            intent.putExtra(PlaybackActivity.MOVIE, mSelectedMovie)
+//            intent.putExtra(PlaybackActivity.PLAY_URL, mVideoInfo.sources[action.id.toInt()].playUrl)
+//            intent.putExtra(PlaybackActivity.DESC, mVideoInfo.desc)
+//            startActivity(intent)
+            val intent = Intent(activity, PlayActivity::class.java)
+            intent.putExtra(PlayActivity.TITLE, mSelectedMovie?.name)
+            intent.putExtra(PlayActivity.VIDEO_URL, mVideoInfo.sources[action.id.toInt()].playUrl)
+            startActivity(intent)
         }
         mPresenterSelector.addClassPresenter(DetailsOverviewRow::class.java, detailsPresenter)
     }
 
-    private fun setupRelatedMovieListRow() {
-        val subcategories = arrayOf(getString(R.string.related_movies))
-        val list = MovieList.list
-
-        Collections.shuffle(list)
-        val listRowAdapter = ArrayObjectAdapter(CardPresenter())
-        for (j in 0 until NUM_COLS) {
-            listRowAdapter.add(list[j % 5])
-        }
-
-        val header = HeaderItem(0, subcategories[0])
-        mAdapter.add(ListRow(header, listRowAdapter))
-        mPresenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
-    }
+//    private fun setupRelatedMovieListRow() {
+//        val subcategories = arrayOf(getString(R.string.related_movies))
+//        val list = MovieList.list
+//
+//        Collections.shuffle(list)
+//        val listRowAdapter = ArrayObjectAdapter(CardPresenter())
+//        for (j in 0 until NUM_COLS) {
+//            listRowAdapter.add(list[j % 5])
+//        }
+//
+//        val header = HeaderItem(0, subcategories[0])
+//        mAdapter.add(ListRow(header, listRowAdapter))
+//        mPresenterSelector.addClassPresenter(ListRow::class.java, ListRowPresenter())
+//    }
 
     fun convertDpToPixel(context: Context, dp: Int): Int {
         val density = context.applicationContext.resources.displayMetrics.density
@@ -188,7 +180,7 @@ class VideoDetailsFragment : DetailsFragment() {
     private inner class ItemViewClickedListener : OnItemViewClickedListener {
         override fun onItemClicked(itemViewHolder: Presenter.ViewHolder?, item: Any?,
                                    rowViewHolder: RowPresenter.ViewHolder, row: Row) {
-            if (item is Movie) {
+            if (item is Video) {
                 Log.d(TAG, "Item: " + item.toString())
                 val intent = Intent(activity, DetailsActivity::class.java)
                 intent.putExtra(resources.getString(R.string.movie), mSelectedMovie)

@@ -15,17 +15,17 @@
 package lee.vioson.videosfortv
 
 import android.support.v17.leanback.widget.AbstractDetailsDescriptionPresenter
-import lee.vioson.videosfortv.web.models.Movie
+import lee.vioson.videosfortv.web.models.Video
 
 class DetailsDescriptionPresenter : AbstractDetailsDescriptionPresenter() {
 
     override fun onBindDescription(
             viewHolder: AbstractDetailsDescriptionPresenter.ViewHolder,
             item: Any) {
-        val movie = item as Movie
+        val movie = item as Video
 
-        viewHolder.title.text = movie.title
-        viewHolder.subtitle.text = movie.studio
-        viewHolder.body.text = movie.description
+        viewHolder.title.text = movie.name
+        viewHolder.subtitle.text = movie.publishTime.toString()
+        viewHolder.body.text = movie.status
     }
 }

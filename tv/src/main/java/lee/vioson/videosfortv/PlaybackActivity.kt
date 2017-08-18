@@ -28,4 +28,10 @@ class PlaybackActivity : FragmentActivity() {
                     .commit()
         }
     }
+
+    companion object {
+        const val PLAY_URL = "hero"
+        const val MOVIE = "Movie"
+        const val DESC = "description"
+    }
 }

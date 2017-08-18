@@ -7,5 +7,5 @@ import com.google.gson.annotations.Expose
  * on 2017/8/18.
  * todo
  */
-class HotPlay(@Expose var viewItemModels: ViewItemModels,
-              @Expose var banner: Banner)
+class HotPlay(@Expose var viewItemModels: List<ViewItemModels>,
+              @Expose var banner: List<Banner>)

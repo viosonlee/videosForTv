@@ -23,6 +23,7 @@ import android.view.ViewGroup
 
 import com.bumptech.glide.Glide
 import lee.vioson.videosfortv.web.models.Movie
+import lee.vioson.videosfortv.web.models.Video
 import kotlin.properties.Delegates
 
 /**
@@ -56,16 +57,16 @@ class CardPresenter : Presenter() {
     }
 
     override fun onBindViewHolder(viewHolder: Presenter.ViewHolder, item: Any) {
-        val movie = item as Movie
+        val movie = item as Video
         val cardView = viewHolder.view as ImageCardView
 
         Log.d(TAG, "onBindViewHolder")
-        if (movie.cardImageUrl != null) {
-            cardView.titleText = movie.title
-            cardView.contentText = movie.studio
+        if (!movie.img.isEmpty()) {
+            cardView.titleText = movie.name
+            cardView.contentText = movie.status
             cardView.setMainImageDimensions(CARD_WIDTH, CARD_HEIGHT)
             Glide.with(viewHolder.view.context)
-                    .load(movie.cardImageUrl)
+                    .load(movie.img)
                     .centerCrop()
                     .error(mDefaultCardImage)
                     .into(cardView.mainImageView)

@@ -3,6 +3,7 @@
     package="lee.vioson.videosfortv">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <uses-feature
@@ -32,8 +33,11 @@
             </intent-filter>
         </activity>
         <activity android:name=".DetailsActivity" />
-        <activity android:name=".PlaybackActivity" />
+        <activity
+            android:name=".PlaybackActivity"
+            android:screenOrientation="landscape" />
         <activity android:name=".BrowseErrorActivity" />
+        <activity android:name=".PlayActivity" />
     </application>
 
 </manifest>
